@@ -1,7 +1,8 @@
 services:
   app:
-    build: .
+    image: ghcr.io/${GITHUB_REPO}:latest
     container_name: codinggame-3026
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "8443:8443"
