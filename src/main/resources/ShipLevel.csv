@@ -1,0 +1,6 @@
+level,name,visibility,maxMovement,speed,resourcesRequirements
+1,barque,1,5,1,PERSONAL_RES:50
+2,voilier,2,7,2,PERSONAL_RES:100
+3,caravelle,3,9,3,PERSONAL_RES:200&A:100
+4,3-Mats,4,11,4,PERSONAL_RES:300&A:150&B:100
+5,Cuirassé,5,13,5,PERSONAL_RES:500&A:300&B:200

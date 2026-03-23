@@ -1,0 +1,68 @@
+services:
+  app:
+    build: .
+    container_name: codinggame-3026
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      - ADMIN_SIGNUP_CODE=${ADMIN_SIGNUP_CODE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - codinggame
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: codinggame-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: 3026db
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d 3026db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codinggame
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: codinggame-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codinggame
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  codinggame:
+    name: codinggame

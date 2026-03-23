@@ -1,0 +1,404 @@
+{
+  "info": {
+    "name": "🏴‍☠️ Treasure API",
+    "description": "Collection pour tester l'API Treasure du jeu 3026",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Treasure",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has required fields', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('cellId');",
+              "    pm.expect(jsonData).to.have.property('claimed');",
+              "    pm.expect(jsonData).to.have.property('resourceType');",
+              "    pm.expect(jsonData).to.have.property('quantity');",
+              "});",
+              "",
+              "pm.test('claimed should be false for new treasure', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.claimed).to.equal(false);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cellId\": \"cell-456\",\n  \"resourceType\": \"CHARBONIUM\",\n  \"quantity\": 50\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/treasures",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures"
+          ]
+        },
+        "description": "Crée un nouveau trésor sur une cellule donnée"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Treasures (Bulk)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response is an array', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(Array.isArray(jsonData)).to.be.true;",
+              "});",
+              "",
+              "pm.test('All treasures have claimed=false', function () {",
+              "    var jsonData = pm.response.json();",
+              "    jsonData.forEach(function(treasure) {",
+              "        pm.expect(treasure.claimed).to.equal(false);",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"cellId\": \"cell-001\",\n    \"resourceType\": \"CHARBONIUM\",\n    \"quantity\": 50\n  },\n  {\n    \"cellId\": \"cell-002\",\n    \"resourceType\": \"ARGENT\",\n    \"quantity\": 100\n  },\n  {\n    \"cellId\": \"cell-003\",\n    \"resourceType\": \"OR\",\n    \"quantity\": 25\n  }\n]"
+        },
+        "url": {
+          "raw": "{{base_url}}/treasures/bulk",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures",
+            "bulk"
+          ]
+        },
+        "description": "Crée plusieurs trésors en une seule requête (transaction atomique)"
+      },
+      "response": []
+    },
+    {
+      "name": "Search & Claim Treasure (Not claimed)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has required fields', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('cellId');",
+              "    pm.expect(jsonData).to.have.property('claimed');",
+              "});",
+              "",
+              "pm.test('claimed should be true after discovery', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.claimed).to.equal(true);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/treasures/search/cell-456",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures",
+            "search",
+            "cell-456"
+          ]
+        },
+        "description": "Cherche et réclame un trésor sur une cellule (si non réclamé, crédite les ressources)"
+      },
+      "response": []
+    },
+    {
+      "name": "Search & Claim Treasure (Already claimed)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('claimed should be true', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.claimed).to.equal(true);",
+              "});",
+              "",
+              "pm.test('Response message should indicate empty treasure chest', function () {",
+              "    pm.environment.set('last_treasure_claimed', true);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/treasures/search/cell-456",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures",
+            "search",
+            "cell-456"
+          ]
+        },
+        "description": "Cherche un trésor déjà réclamé (coffre vide - aucune ressource créditée)"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: No treasure on cell",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Error message should be \"Aucun trésor découvert\"', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include('Aucun trésor découvert');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/treasures/search/cell-nonexistent",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures",
+            "search",
+            "cell-nonexistent"
+          ]
+        },
+        "description": "Teste le cas où aucun trésor n'existe sur la cellule"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Treasure already exists on cell",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 or 409', function () {",
+              "    pm.response.to.have.status.oneOf([400, 409]);",
+              "});",
+              "",
+              "pm.test('Error message should mention existing treasure', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include('existe déjà');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cellId\": \"cell-456\",\n  \"resourceType\": \"ARGENT\",\n  \"quantity\": 100\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/treasures",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures"
+          ]
+        },
+        "description": "Teste la création d'un 2e trésor sur la même cellule (contrainte unique)"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Cell not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Error message should mention cell not found', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include('non trouvée');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "codinggame-id",
+            "value": "player-123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cellId\": \"cell-does-not-exist\",\n  \"resourceType\": \"CHARBONIUM\",\n  \"quantity\": 50\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/treasures",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures"
+          ]
+        },
+        "description": "Teste la création d'un trésor sur une cellule inexistante"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Missing authentication header",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 500 or 400', function () {",
+              "    pm.response.to.have.status.oneOf([400, 500]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cellId\": \"cell-456\",\n  \"resourceType\": \"CHARBONIUM\",\n  \"quantity\": 50\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/treasures/search/cell-456",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "treasures",
+            "search",
+            "cell-456"
+          ]
+        },
+        "description": "Teste l'absence du header codinggame-id"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}
+

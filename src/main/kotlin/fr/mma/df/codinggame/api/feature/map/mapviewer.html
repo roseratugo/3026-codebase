@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="FR">
+<head>
+    <title>GameMap Canvas Viewer</title>
+    <style>
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+        }
+
+        #mapCanvas {
+            position: fixed;
+            left: 25%;
+            border: 1px solid #ccc;
+            width: 800px;
+            height: 800px;
+        }
+    </style>
+</head>
+<body>
+<div id="controls">
+    <form id="mapForm">
+        <!-- Formulaire identique -->
+        <label>Width: <input type="number" name="width" value="1000"></label><br>
+        <label>Height: <input type="number" name="height" value="1000"></label><br>
+        <label>Seed: <input type="number" name="seed" value="3026"></label><br>
+        <label>Scale Factor: <input type="number" name="scaleFactor" value="10"></label><br>
+        <label>Saving: <input type="checkbox" name="saving"></label><br>
+        <label>Min Island Size: <input type="number" name="minIslandSize" value="4"></label><br>
+        <label>Max Island Size: <input type="number" name="maxIslandSize" value="100"></label><br>
+        <label>Zones: <input type="text" name="zones" value="100,200"></label><br>
+        <label>Types: <input type="text" name="types" value="0.55,0.65,0.90"></label><br>
+        <button type="submit">Générer la carte</button>
+    </form>
+</div>
+
+<canvas id="mapCanvas" width="800" height="800"></canvas>
+
+<script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 5;
+
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let dragStart = {x: 0, y: 0};
+    let lastMapData = [];
+
+    function getColor(type) {
+        switch (type) {
+            case 'ROCKS':
+                return '#68c160';
+            case 'SEA':
+                return '#81d4fa';
+            case 'MOUNTAIN':
+                return '#474747';
+            case 'SAND':
+                return '#C2B280';
+            default:
+                return '#eeeeee';
+        }
+    }
+
+    function getZoneOverlayColor(zone) {
+        switch (zone) {
+            case 1:
+                return 'rgba(0,255,0,0.1)';
+            case 2:
+                return 'rgba(255,195,0,0.1)';
+            case 3:
+                return 'rgba(255,31,31,0.1)';
+            default:
+                return 'rgba(0, 0, 0, 0)';
+        }
+    }
+
+    function drawVisibleCells() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Remplissage initial en bleu SEA
+        ctx.fillStyle = getColor('SEA');
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+        const viewLeft = -offsetX / scale;
+        const viewTop = -offsetY / scale;
+        const viewRight = viewLeft + canvas.width / scale;
+        const viewBottom = viewTop + canvas.height / scale;
+
+        for (const cell of lastMapData) {
+            const x = cell.x * cellSize;
+            const y = cell.y * cellSize;
+
+            if (x + cellSize < viewLeft || x > viewRight || y + cellSize < viewTop || y > viewBottom) {
+                continue;
+            }
+
+            if (cell.type !== 'SEA') {
+                ctx.fillStyle = getColor(cell.type);
+                ctx.fillRect(x, y, cellSize, cellSize);
+            }
+
+            ctx.fillStyle = getZoneOverlayColor(cell.zone);
+            ctx.fillRect(x, y, cellSize, cellSize);
+        }
+    }
+
+    function requestDraw() {
+        window.requestAnimationFrame(drawVisibleCells);
+    }
+
+    document.getElementById('mapForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const jsonData = {
+            width: parseInt(formData.get('width')),
+            height: parseInt(formData.get('height')),
+            seed: parseInt(formData.get('seed')),
+            scaleFactor: parseInt(formData.get('scaleFactor')),
+            saving: formData.get('saving') === 'on',
+            minIslandSize: parseInt(formData.get('minIslandSize')),
+            maxIslandSize: parseInt(formData.get('maxIslandSize')),
+            zones: formData.get('zones').split(',').map(Number),
+            types: formData.get('types').split(',').map(Number)
+        };
+
+        fetch('http://localhost:8443/maps', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'codinggame-id': 'test'
+            },
+            body: JSON.stringify(jsonData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                lastMapData = data;
+                requestDraw();
+            })
+            .catch(error => console.error('Erreur lors du chargement de la carte :', error));
+    });
+
+    // Zoom
+    canvas.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+        const mouseX = e.offsetX;
+        const mouseY = e.offsetY;
+
+        const worldX = (mouseX - offsetX) / scale;
+        const worldY = (mouseY - offsetY) / scale;
+
+        scale *= zoomFactor;
+        offsetX = mouseX - worldX * scale;
+        offsetY = mouseY - worldY * scale;
+
+        requestDraw();
+    });
+
+    // Pan
+    canvas.addEventListener('mousedown', function (e) {
+        isDragging = true;
+        dragStart.x = e.clientX;
+        dragStart.y = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', function (e) {
+        if (isDragging) {
+            offsetX += e.clientX - dragStart.x;
+            offsetY += e.clientY - dragStart.y;
+            dragStart.x = e.clientX;
+            dragStart.y = e.clientY;
+            requestDraw();
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('mouseleave', () => isDragging = false);
+
+    fetch('http://localhost:8443/cells', {
+        method: 'get',
+        headers: {
+            'Content-Type': 'application/json',
+            'codinggame-id': 'test'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            lastMapData = data;
+            requestDraw();
+        })
+        .catch(error => console.error('Erreur lors du chargement de la carte :', error));
+</script>
+</body>
+</html>
