@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/${GITHUB_REPO}:latest
+    image: ghcr.io/roseratugo/3026-codebase:latest
     container_name: codinggame-3026
     pull_policy: always
     restart: unless-stopped
